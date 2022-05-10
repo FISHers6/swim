@@ -1,5 +1,4 @@
 use route_recognizer::Params;
-use std::sync::Arc;
 pub struct Request<State> {
     request: hyper::Request<hyper::body::Body>,
     state: State,
@@ -19,11 +18,15 @@ impl<State> Request<State> {
         }
     }
 
-    pub fn method(&self) -> http::method::Method {
-        todo!()
+    pub fn method(&self) -> &http::method::Method {
+        self.request.method()
     }
 
     pub fn url(&self) -> String {
-        todo!()
+        self.request.uri().path().to_owned()
+    }
+
+    pub fn params(&self) -> &Params {
+        &self.params
     }
 }

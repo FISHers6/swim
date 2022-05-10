@@ -2,7 +2,7 @@
 <project version="4">
   <component name="CMakeSettings">
     <configurations>
-      <configuration PROFILE_NAME="Debug" ENABLED="true" CONFIG_NAME="Debug" />
+      <configuration PROFILE_NAME="Debug" CONFIG_NAME="Debug" ENABLED="true" />
     </configurations>
   </component>
   <component name="CargoProjects">
@@ -11,9 +11,8 @@
   <component name="ChangeListManager">
     <list default="true" id="c8593577-b91b-41f5-92d4-cef0a1513d33" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/Cargo.toml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/chain.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/chain.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/middleware.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/middleware.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/request.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/request.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/response.rs" beforeDir="false" afterPath="$PROJECT_DIR$/src/response.rs" afterDir="false" />
     </list>
@@ -55,28 +54,12 @@
     <property name="WebServerToolWindowFactoryState" value="false" />
     <property name="cf.first.check.clang-format" value="false" />
     <property name="cidr.known.project.marker" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/../hyper-example/Cargo.toml" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="org.rust.cargo.project.model.PROJECT_DISCOVERY" value="true" />
-  </component>
-  <component name="RunManager">
-    <configuration default="true" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-      <option name="command" value="run" />
-      <option name="channel" value="DEFAULT" />
-      <option name="requiredFeatures" value="true" />
-      <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
-      <option name="withSudo" value="false" />
-      <option name="backtrace" value="SHORT" />
-      <envs />
-      <option name="isRedirectInput" value="false" />
-      <option name="redirectInputPath" value="" />
-      <method v="2">
-        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-      </method>
-    </configuration>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
+    <option name="version" value="2" />
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -87,6 +70,7 @@
       <option name="presentableId" value="Default" />
       <updated>1651630155086</updated>
       <workItem from="1651630157998" duration="18554000" />
+      <workItem from="1652169461231" duration="13727000" />
     </task>
     <servers />
   </component>

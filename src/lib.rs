@@ -6,6 +6,7 @@ mod response;
 mod router;
 
 use crate::chain::Chain;
+use crate::handler::Handler;
 use crate::middleware::Middleware;
 use crate::request::Request;
 use crate::response::Response;
@@ -15,7 +16,6 @@ use hyper::service::Service;
 use hyper::Error;
 use hyper::Server;
 use route_recognizer::Match;
-use std::convert::Infallible;
 use std::future::Future;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::pin::Pin;
@@ -54,13 +54,19 @@ where
         self
     }
 
-    pub async fn swim<A>(self, addr: A)
+    pub fn get<S: AsRef<str>, F: Handler<State>>(mut self, path: S, handler: F) -> App<State> {
+        let router = Arc::get_mut(&mut self.router).expect("Can not find router");
+        let _ = router.get(path, handler);
+        self
+    }
+
+    pub async fn swim<A>(&self, addr: A)
     where
         A: ToSocketAddrs,
     {
         let addr: SocketAddr = addr.to_socket_addrs().unwrap().next().unwrap();
         let server = Server::bind(&addr)
-            .serve(MakeService(self))
+            .serve(MakeService(self.clone()))
             .map_err(|e| println!("server error: {}", e));
         let _ = server.await;
     }
@@ -84,8 +90,8 @@ impl<State: Clone + Send + Sync + 'static> Service<hyper::Request<hyper::body::B
     type Future =
         Pin<Box<dyn Future<Output = std::result::Result<Self::Response, Self::Error>> + Send>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
-        todo!()
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
+        Ok(()).into()
     }
 
     fn call(&mut self, req: hyper::Request<hyper::body::Body>) -> Self::Future {
@@ -94,17 +100,25 @@ impl<State: Clone + Send + Sync + 'static> Service<hyper::Request<hyper::body::B
             router,
             middlewares,
         } = self.clone();
+        println!("call app");
         let future = async move {
             // 取出路由
             let method = req.method().to_owned();
-            let Match { handler, params } = router.find(req.uri().path(), &method).unwrap(); // todo 错误处理
-            let request: Request<State> = crate::request::Request::from_http(req, state, params);
-            // 取出下一个执行的中间件并链式执行
-            let chain = Chain {
-                handler,
-                next: &middlewares,
-            };
-            let response = chain.call(request).await;
+            let path = req.uri().path();
+            println!("path: {}", path);
+            let mut response = Response::new();
+            if let Some(Match { handler, params }) = router.find(path, &method) {
+                let request: Request<State> =
+                    crate::request::Request::from_http(req, state, params);
+                // 取出下一个执行的中间件并链式执行
+                let chain = Chain {
+                    handler,
+                    next: &middlewares,
+                };
+                response = chain.call(request).await;
+            } else {
+                response.set_status(404)
+            }
             Ok(response.into())
         };
         Box::pin(future)
@@ -114,14 +128,6 @@ impl<State: Clone + Send + Sync + 'static> Service<hyper::Request<hyper::body::B
 /// MakeService实现了Service trait
 /// 并且满足了MakeServiceRef trait的要求: S满足HttpService
 /// 所以满足MakeServiceRef<I::Conn, Body, ResBody = B>
-/// ```
-/// use hyper::service::Service;
-/// impl<T, Target, E, ME, S, F, IB, OB> MakeServiceRef<Target, IB> for T
-/// where
-///     T: for<'a> Service<&'a Target, Error = ME, Response = S, Future = F>,
-///     S: HttpService<IB, ResBody = OB, Error = E>{}
-/// ```
-///
 pub struct MakeService<State>(App<State>);
 
 impl<T, State: Clone> Service<T> for MakeService<State> {
@@ -129,20 +135,72 @@ impl<T, State: Clone> Service<T> for MakeService<State> {
     type Error = std::io::Error;
     type Future = future::Ready<std::result::Result<Self::Response, Self::Error>>;
 
-    fn poll_ready(&mut self, cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
+    fn poll_ready(&mut self, _cx: &mut Context<'_>) -> Poll<std::result::Result<(), Self::Error>> {
         Ok(()).into()
     }
 
     fn call(&mut self, _: T) -> Self::Future {
+        println!("call make service");
         future::ok(self.0.clone())
     }
 }
 
 #[cfg(test)]
 mod tests {
-    #[test]
-    fn it_works() {
-        let result = 2 + 2;
-        assert_eq!(result, 4);
+    use super::App;
+    use crate::chain::Chain;
+    use crate::middleware::Middleware;
+    use crate::request::Request;
+    use crate::response::Response;
+    use async_trait::async_trait;
+    use std::future::Future;
+    use std::pin::Pin;
+
+    fn after<'a>(
+        request: Request<()>,
+        chain: Chain<'a, ()>,
+    ) -> Pin<Box<dyn Future<Output = crate::Result> + 'a + Send>> {
+        let future = async move {
+            let response = chain.call(request).await;
+            println!("after middleware");
+            Ok(response)
+        };
+        Box::pin(future)
+    }
+
+    struct Before<F>(pub F);
+
+    #[async_trait]
+    impl<State, F, Fut> Middleware<State> for Before<F>
+    where
+        State: Clone + Send + Sync + 'static,
+        F: Fn(Request<State>) -> Fut + Send + Sync + 'static, // acquire a request
+        Fut: Future<Output = Request<State>> + Send + Sync + 'static, // return a new request
+    {
+        async fn handle(&self, request: Request<State>, chain: Chain<'_, State>) -> crate::Result {
+            let request = (self.0)(request).await;
+            Ok(chain.call(request).await)
+        }
+    }
+
+    #[tokio::test]
+    async fn example() {
+        let _app = App::new()
+            .get("/hello", |request: Request<_>| async move {
+                println!("request: {}", request.url());
+                println!("params: {:?}", request.params());
+                Ok(Response::new())
+            })
+            .get("/world", |request: Request<_>| async move {
+                println!("request: {}", request.url());
+                Ok(Response::new())
+            })
+            .with(Before(|request: Request<_>| async move {
+                println!("before middleware, request.url: {}", request.url());
+                request
+            }))
+            .with(after)
+            .swim("127.0.0.1:8008")
+            .await;
     }
 }

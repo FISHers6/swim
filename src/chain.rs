@@ -14,13 +14,13 @@ impl<State: Clone + Send + Sync + 'static> Chain<'_, State> {
         if let Some((current_middleware, next_middlewares)) = self.next.split_first() {
             self.next = next_middlewares;
             match current_middleware.handle(request, self).await {
-                Ok(request) => request,
-                Err(err) => todo!(),
+                Ok(response) => response,
+                Err(err) => Response::internal_server_error(err),
             }
         } else {
             match self.handler.call(request).await {
                 Ok(response) => response,
-                Err(err) => todo!(),
+                Err(err) => Response::internal_server_error(err),
             }
         }
     }
