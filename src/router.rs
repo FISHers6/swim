@@ -26,20 +26,19 @@ impl<State: Clone + Send + Sync + 'static> Router<State> {
         method: Method,
         path: S,
         handler: F,
-    ) -> &mut Router<State> {
+    ) {
         self.mut_inner()
             .routers
             .entry(method)
             .or_insert(Recognizer::new())
             .add(path.as_ref(), Box::new(handler));
-        self
     }
 
     pub fn get<S: AsRef<str>, F: Handler<State>>(
         &mut self,
         path: S,
         handler: F,
-    ) -> &mut Router<State> {
+    ) {
         self.route(Method::GET, path, handler)
     }
 
@@ -47,9 +46,50 @@ impl<State: Clone + Send + Sync + 'static> Router<State> {
         &mut self,
         path: S,
         handler: F,
-    ) -> &mut Router<State> {
+    ) {
         self.route(Method::POST, path, handler)
     }
+
+    pub fn put<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) {
+        self.route(Method::PUT, path, handler)
+    }
+
+    pub fn delete<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) {
+        self.route(Method::DELETE, path, handler)
+    }
+
+    pub fn head<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) {
+        self.route(Method::HEAD, path, handler)
+    }
+
+    pub fn options<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) {
+        self.route(Method::OPTIONS, path, handler)
+    }
+
+    pub fn patch<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) {
+        self.route(Method::PATCH, path, handler)
+    }
+
 
     pub fn find<S: AsRef<str>>(
         &self,

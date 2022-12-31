@@ -68,6 +68,12 @@ where
         self
     }
 
+    pub fn put<S: AsRef<str>, F: Handler<State>>(mut self, path: S, handler: F) -> App<State> {
+        let router = Arc::get_mut(&mut self.router).expect("Can not find router");
+        let _ = router.post(path, handler);
+        self
+    }
+
     pub async fn swim<A>(&self, addr: A)
     where
         A: ToSocketAddrs,
