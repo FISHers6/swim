@@ -4,6 +4,8 @@ mod middleware;
 mod request;
 mod response;
 mod router;
+mod body;
+mod errors;
 
 use crate::chain::Chain;
 use crate::handler::Handler;
@@ -60,6 +62,12 @@ where
         self
     }
 
+    pub fn post<S: AsRef<str>, F: Handler<State>>(mut self, path: S, handler: F) -> App<State> {
+        let router = Arc::get_mut(&mut self.router).expect("Can not find router");
+        let _ = router.post(path, handler);
+        self
+    }
+
     pub async fn swim<A>(&self, addr: A)
     where
         A: ToSocketAddrs,
@@ -109,7 +117,7 @@ impl<State: Clone + Send + Sync + 'static> Service<hyper::Request<hyper::body::B
             let mut response = Response::new();
             if let Some(Match { handler, params }) = router.find(path, &method) {
                 let request: Request<State> =
-                    crate::request::Request::from_http(req, state, params);
+                    Request::from_http(req, state, params);
                 // 取出下一个执行的中间件并链式执行
                 let chain = Chain {
                     handler,
@@ -155,6 +163,8 @@ mod tests {
     use async_trait::async_trait;
     use std::future::Future;
     use std::pin::Pin;
+    use http::StatusCode;
+    use serde_derive::{Deserialize, Serialize};
 
     fn after<'a>(
         request: Request<()>,
@@ -189,6 +199,7 @@ mod tests {
             .get("/hello", |request: Request<_>| async move {
                 println!("request: {}", request.url());
                 println!("params: {:?}", request.params());
+                println!("headers: {:?}", request.headers());
                 Ok(Response::new())
             })
             .get("/world", |request: Request<_>| async move {
@@ -201,6 +212,35 @@ mod tests {
             }))
             .with(after)
             .swim("127.0.0.1:8008")
+            .await;
+    }
+
+    #[derive(Deserialize, Debug)]
+    struct Todo {
+        id: i64,
+        title: String,
+        description: String,
+    }
+
+    #[tokio::test]
+    async fn json_body() {
+        let _app = App::new()
+            .post("/body", |mut request: Request<_>| async move {
+                let mut response = Response::new();
+                let todo: anyhow::Result<Todo> = request.parse_json().await;
+                match todo {
+                    Ok(todo) => {
+                        println!("{:#?}", todo);
+                        // todo Response结构实现写数据
+                        Ok(response)
+                    }
+                    Err(err) => {
+                        response.set_status(StatusCode::BAD_REQUEST);
+                        Ok(response)
+                    }
+                }
+            })
+            .swim("127.0.0.1:8009")
             .await;
     }
 }

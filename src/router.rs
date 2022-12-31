@@ -43,6 +43,14 @@ impl<State: Clone + Send + Sync + 'static> Router<State> {
         self.route(Method::GET, path, handler)
     }
 
+    pub fn post<S: AsRef<str>, F: Handler<State>>(
+        &mut self,
+        path: S,
+        handler: F,
+    ) -> &mut Router<State> {
+        self.route(Method::POST, path, handler)
+    }
+
     pub fn find<S: AsRef<str>>(
         &self,
         path: S,
